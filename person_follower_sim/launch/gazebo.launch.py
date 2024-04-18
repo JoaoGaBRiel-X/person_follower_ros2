@@ -40,7 +40,7 @@ def generate_launch_description():
                             name='robot_state_publisher',
                             parameters = [{'robot_description': ParameterValue(Command( \
                                         ['xacro ', xacro_file,
-                                        # ' kinect_enabled:=', kinect_enabled,
+                                        ' kinect_enabled:=', "true",
                                         # ' lidar_enabled:=', lidar_enabled,
                                         # ' camera_enabled:=', camera_enabled,
                                         ]), value_type=str)}]

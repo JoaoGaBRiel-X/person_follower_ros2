@@ -50,7 +50,7 @@ class PersonFollower(Node):
         self.buffer=10
 
         # Create the options that will be used for ImageSegmenter
-        base_options = python.BaseOptions(model_asset_path='/home/pragya/personfollower_ws/src/Person-Follower/person_follower/person_follower/deeplabv3.tflite')
+        base_options = python.BaseOptions(model_asset_path='src/Person-Follower/person_follower/person_follower/deeplabv3.tflite')
         options = vision.ImageSegmenterOptions(base_options=base_options,output_category_mask=True)
         self.segmenter = vision.ImageSegmenter.create_from_options(options)
 
