@@ -28,7 +28,7 @@ class PersonFollower(Node):
         self.last_depth = 0.0
         self.depth_image = None
         self.person_detected = False
-
+        self.depth_mm = 0
         self.velocity_msg = Twist()
         self.velocity_msg = Twist()
         self.velocity_msg.linear.y = 0.0
@@ -50,7 +50,7 @@ class PersonFollower(Node):
         self.buffer=10
 
         # Create the options that will be used for ImageSegmenter
-        base_options = python.BaseOptions(model_asset_path='src/Person-Follower/person_follower/person_follower/deeplabv3.tflite')
+        base_options = python.BaseOptions(model_asset_path='/home/crocodile/ros2_ws/src/Person-Follower/person_follower/person_follower/deeplabv3.tflite')
         options = vision.ImageSegmenterOptions(base_options=base_options,output_category_mask=True)
         self.segmenter = vision.ImageSegmenter.create_from_options(options)
 
@@ -159,10 +159,10 @@ class PersonFollower(Node):
 
     def move_robot(self):
         # Constants for PD controller
-        Kp_l = 0.48
-        Kp_yaw = 0.0045
-        Kd_yaw = 0.0008
-        Kd_l = 0.25
+        Kp_l = 0.4
+        Kp_yaw = 0.00065
+        Kd_yaw = 0.00007
+        Kd_l = 0.37
 
         # Calculating the error
         x_error = self.x_center - self.image_center -3.0
@@ -183,7 +183,7 @@ class PersonFollower(Node):
             # Stop the robot if depth information is insufficient
             self.vel_control(0.0, 0.0)
             top = "Centre"
-            bottom = "Go Forward"
+            bottom = "Stopped"
 
         # Proportional and Derivative Drive
         P_x = Kp_l * self.depth_mm
@@ -209,7 +209,6 @@ class PersonFollower(Node):
                 self.y_center=499.0
     
     def vel_control(self, vel_x, vel_spin):
-        # Search for person in the vicinity
         twist_msg = Twist()
         twist_msg.linear.x = vel_x
         twist_msg.angular.z = vel_spin
