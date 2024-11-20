@@ -17,11 +17,11 @@ class PersonFollower(Node):
         self.bridge = CvBridge()
 
         # Subscribe to the RGB image topic and depth image topic
-        self.image_sub = self.create_subscription(Image, "/kinect_camera/image_raw", self.callback, 10)
-        self.depth_sub = self.create_subscription(Image, "/kinect_camera/depth/image_raw", self.depth_callback, 10)
+        self.image_sub = self.create_subscription(Image, "/camera/image_raw", self.callback, 10)
+        self.depth_sub = self.create_subscription(Image, "/camera/depth/image_raw", self.depth_callback, 10)
 
         # Publisher for robot velocity commands
-        self.velocity_publisher = self.create_publisher(Twist, "/cmd_vel", 10)
+        self.velocity_publisher = self.create_publisher(Twist, "cmd_vel_tracker", 10)
 
         # Initialize variables
         self.last_error = 0.0
@@ -50,7 +50,7 @@ class PersonFollower(Node):
         self.buffer=10
 
         # Create the options that will be used for ImageSegmenter
-        base_options = python.BaseOptions(model_asset_path='/home/crocodile/ros2_ws/src/Person-Follower/person_follower/person_follower/deeplabv3.tflite')
+        base_options = python.BaseOptions(model_asset_path='/home/kinenav/kinenav_ws/src/person_follower/person_follower/person_follower/deeplabv3.tflite')
         options = vision.ImageSegmenterOptions(base_options=base_options,output_category_mask=True)
         self.segmenter = vision.ImageSegmenter.create_from_options(options)
 
@@ -135,7 +135,7 @@ class PersonFollower(Node):
         else: # No Person Detected
 
             if self.person_detected == True:  # Person was detected atleast once before
-                self.vel_control(0.0 , -0.5)
+                self.vel_control(0.0 , -0.7)
 
                 # Put text on the screen
                 top = "Searching Person"
@@ -158,55 +158,72 @@ class PersonFollower(Node):
         self.mp_drawing.draw_landmarks(self.cv_image, self.results.pose_landmarks)
 
     def move_robot(self):
-        # Constants for PD controller
-        Kp_l = 0.4
-        Kp_yaw = 0.00065
-        Kd_yaw = 0.00007
-        Kd_l = 0.37
+        # # Constants for PD controller
+        # Kp_l = 0.04
+        # Kp_yaw = 0.0065
+        # Kd_yaw = 0.00007
+        # Kd_l = 0.37
 
         # Calculating the error
-        x_error = self.x_center - self.image_center -3.0
+        x_error = self.x_center - self.image_center -10.0
 
-        if self.depth_mm > 3:
+        if self.depth_mm > 1900:
 
             # Determine the direction to move based on the person's position
             if x_error > 10:
                 top = "Right==>"
                 bottom = "Go Forward"
+                # Publish the Twist message to move the robot
+                # self.vel_control(self.depth_mm * 0.001, -x_error * 0.01)
             elif x_error < -10:
-               top = "<==Left"
-               bottom = "Go Forward"
+                top = "<==Left"
+                bottom = "Go Forward"
+                # Publish the Twist message to move the robot
+                # self.vel_control(self.depth_mm * 0.001, -x_error * 0.01)
             else:
-               top = "Centre"
-               bottom = "Go Forward"
+                top = "Centre"
+                bottom = "Go Forward"
+                # Publish the Twist message to move the robot
+
+            x_vel = (self.depth_mm * 0.001) / 2.5
+
+            z_vel = -x_error * 0.01
+
+            if x_vel > 0.7:
+                x_vel = 0.7
+
+            if z_vel > 1.5:
+                z_vel = 1.5
+                
+            
+            self.vel_control(x_vel , z_vel)
         else:
             # Stop the robot if depth information is insufficient
             self.vel_control(0.0, 0.0)
             top = "Centre"
             bottom = "Stopped"
 
-        # Proportional and Derivative Drive
-        P_x = Kp_l * self.depth_mm
-        P_yaw = -(Kp_yaw * x_error)
-        D_yaw = ((x_error - self.last_error) / 0.6) * Kd_yaw
-        D_l = ((self.depth_mm - self.last_depth) / 0.6) * Kd_l
+        # # Proportional and Derivative Drive
+        # P_x = self.depth_mm
+        # P_yaw = -(x_error)
+        # D_yaw = ((x_error - self.last_error) / 0.6)
+        # D_l = ((self.depth_mm - self.last_depth) / 0.6)
 
-        self.last_depth = self.depth_mm
-        self.last_error = x_error
+        # self.last_depth = self.depth_mm
+        # self.last_error = x_error
 
-        # Publish the Twist message to move the robot
-        self.vel_control((P_x + D_l), (P_yaw + D_yaw))
-
+        
+        # self.vel_control(self.depth_mm * 0.001, -x_error * 0.01)
         # Display text on the image
         self.display_text_on_image(bottom, top)
         
 
     
     def limiting_loop(self):
-        if self.x_center > 700:
-                self.x_center=699.0
-        if self.y_center> 500:
-                self.y_center=499.0
+        if self.x_center > 640:
+                self.x_center=639.0
+        if self.y_center> 480:
+                self.y_center=479.0
     
     def vel_control(self, vel_x, vel_spin):
         twist_msg = Twist()
